@@ -58,7 +58,7 @@ def scrape(url: str):
     """
 
     try:
-        return pd.read_csv(url, sep=' ', skipinitialspace=True, index_col=0)
+        return pd.read_csv(url, sep=' ', skipinitialspace=True, index_col=0, dtype=str)
     except HTTPError:
         logging.warning('Scraping failed, ensure year/week combination exists')
 
@@ -101,12 +101,12 @@ def main(**custom_params):
                 week = f'0{week}'
             url = get_url(year=str(year), week=str(week))
             data_by_week = scrape(url)
-            data_filtered = filter(data_by_week,
-                                   x_min=parameters['x_min'],
-                                   x_max=parameters['x_max'],
-                                   y_min=parameters['y_min'],
-                                   y_max=parameters['y_max'])
-            data_filtered_and_parsed = parse_datetime(data_filtered)
+            # data_filtered = filter(data_by_week,
+            #                        x_min=parameters['x_min'],
+            #                        x_max=parameters['x_max'],
+            #                        y_min=parameters['y_min'],
+            #                        y_max=parameters['y_max'])
+            data_filtered_and_parsed = parse_datetime(data_by_week)
             logging.info(f'{year}-{week} scraped, filtered, and parsed')
             database.to_sql(df=data_filtered_and_parsed,
                             table_name='seismicity')
