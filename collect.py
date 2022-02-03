@@ -14,14 +14,11 @@ import database
 import plot
 
 warnings.filterwarnings('ignore')
-# To call from crontab
-cwd = os.path.dirname(os.path.realpath(__file__))
-
-logging.basicConfig(filename=f'{cwd}/logs.log',
+logging.basicConfig(filename=f'logs.log',
                     level=logging.INFO,
                     format='%(asctime)s %(message)s')
 
-with open("config.json") as f:
+with open(f"config.json") as f:
     settings = json.load(f)
 parameters = settings["default_values"]
 
@@ -97,7 +94,7 @@ def main(**custom_params):
 
     # +1 b/c of Python's zero-based index
     years = np.arange(parameters['year_min'] + 1, parameters['year_max'] + 1)
-    weeks = np.arange(2, 53)
+    weeks = np.arange(3, 53)
     for year in years:
         for week in weeks:
             if week < 10:
@@ -113,7 +110,8 @@ def main(**custom_params):
             logging.info(f'{year}-{week} scraped, filtered, and parsed')
             # plot.plot(data_filtered_and_parsed)
             # print(data_filtered_and_parsed)
-            database.to_sql(df=data_filtered_and_parsed, table_name='seismicity')
+            database.to_sql(df=data_filtered_and_parsed,
+                            table_name='seismicity')
             break
         break
 
