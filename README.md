@@ -1,2 +1,3 @@
 # sICEmicity
-Scrapes, cleans and converts seismicity data from The Icelandic Meteorological Office for analytics
+
+Scrapes, parses, converts coordinates, and saves to database seismicity data from The Icelandic MET for analytics
