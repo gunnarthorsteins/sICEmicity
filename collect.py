@@ -8,12 +8,15 @@ import os
 import numpy as np
 import pandas as pd
 from urllib.error import HTTPError
+import warnings
 
-import filter
+import database
 import plot
 
+warnings.filterwarnings('ignore')
 # To call from crontab
 cwd = os.path.dirname(os.path.realpath(__file__))
+
 logging.basicConfig(filename=f'{cwd}/logs.log',
                     level=logging.INFO,
                     format='%(asctime)s %(message)s')
@@ -63,30 +66,56 @@ def scrape(url: str):
         logging.warning('Scraping failed, ensure year/week combination exists')
 
 
+def filter(df: pd.DataFrame, x_min: float, x_max: float, y_min: float,
+           y_max: float):
+    """Removes seismic events outside desired bounding box
+
+    Args:
+        df (pd.DataFrame): The entire dataset
+        x_min (float): Leftmost value
+        x_max (float): Rightmost value
+        y_min (float): Lowest value
+        y_max (float): Highest value
+
+    Returns:
+        (pd.DataFrame): The filtered data
+    """
+    return df[(x_min < df.Lengd) & (df.Lengd < x_max) & (y_min < df.Breidd)
+              & (df.Breidd < y_max)]
+
+
+def parse_datetime(df: pd.DataFrame):
+    df['Datetime'] = df['Dags.'].astype(str) + df['Timi'].astype(str)
+    df['Datetime'] = pd.to_datetime(df['Datetime'], format=f'%Y%m%d%H%M%S.%f')
+    df.drop(['Dags.', 'Timi'], axis=1, inplace=True)
+    return df
+
+
 def main(**custom_params):
     for parameter, value in custom_params.items():
         parameters[parameter] = value
 
     # +1 b/c of Python's zero-based index
     years = np.arange(parameters['year_min'] + 1, parameters['year_max'] + 1)
-    weeks = np.arange(1, 53)
-    # sql = database.SQL()
+    weeks = np.arange(2, 53)
     for year in years:
         for week in weeks:
             if week < 10:
                 week = f'0{week}'
             url = get_url(year=str(year), week=str(week))
             data_by_week = scrape(url)
-            data_filtered = filter.filter(data_by_week,
-                                          x_min=parameters['x_min'],
-                                          x_max=parameters['x_max'],
-                                          y_min=parameters['y_min'],
-                                          y_max=parameters['y_max'])
-            logging.info(f'{year}-{week} scraped and filtered')
-            plot.plot(data_filtered)
+            data_filtered = filter(data_by_week,
+                                   x_min=parameters['x_min'],
+                                   x_max=parameters['x_max'],
+                                   y_min=parameters['y_min'],
+                                   y_max=parameters['y_max'])
+            data_filtered_and_parsed = parse_datetime(data_filtered)
+            logging.info(f'{year}-{week} scraped, filtered, and parsed')
+            # plot.plot(data_filtered_and_parsed)
+            # print(data_filtered_and_parsed)
+            database.to_sql(df=data_filtered_and_parsed, table_name='seismicity')
             break
         break
-    # sql.write(table='seismicity', data=data_filtered, logging_message='earthquakes')
 
 
 if __name__ == '__main__':

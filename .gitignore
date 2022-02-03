@@ -2,7 +2,7 @@
 # SQL config-file (contains passwords)
 sql_config.json
 logs.log
-
+plots/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
