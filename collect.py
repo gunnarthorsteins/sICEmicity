@@ -1,5 +1,5 @@
 # Note: I'm letting it fail on the current year if the week
-# hasn't passed yet
+# doesn't exist yet
 
 import fire
 import json
@@ -8,6 +8,9 @@ import os
 import numpy as np
 import pandas as pd
 from urllib.error import HTTPError
+
+import filter
+import plot
 
 # To call from crontab
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -60,25 +63,7 @@ def scrape(url: str):
         logging.warning('Scraping failed, ensure year/week combination exists')
 
 
-def filter(df: pd.DataFrame, x_min: float, x_max: float, y_min: float,
-           y_max: float):
-    """Removes seismic events outside desired bounding box
-
-    Args:
-        df (pd.DataFrame): The entire dataset
-        x_min (float): Leftmost value
-        x_max (float): Rightmost value
-        y_min (float): Lowest value
-        y_max (float): Highest value
-
-    Returns:
-        (pd.DataFrame): The filtered data
-    """
-    return df[(x_min < df.Lengd) & (df.Lengd < x_max) & (y_min < df.Breidd)
-              & (df.Breidd < y_max)]
-
-
-def collect(**custom_params):
+def main(**custom_params):
     for parameter, value in custom_params.items():
         parameters[parameter] = value
 
@@ -92,16 +77,17 @@ def collect(**custom_params):
                 week = f'0{week}'
             url = get_url(year=str(year), week=str(week))
             data_by_week = scrape(url)
-            data_filtered = filter(data_by_week,
-                                   x_min=parameters['x_min'],
-                                   x_max=parameters['x_max'],
-                                   y_min=parameters['y_min'],
-                                   y_max=parameters['y_max'])
-            print(data_filtered)
+            data_filtered = filter.filter(data_by_week,
+                                          x_min=parameters['x_min'],
+                                          x_max=parameters['x_max'],
+                                          y_min=parameters['y_min'],
+                                          y_max=parameters['y_max'])
+            logging.info(f'{year}-{week} scraped and filtered')
+            plot.plot(data_filtered)
             break
         break
     # sql.write(table='seismicity', data=data_filtered, logging_message='earthquakes')
 
 
 if __name__ == '__main__':
-    fire.Fire(collect)
+    fire.Fire(main)
