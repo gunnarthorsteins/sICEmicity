@@ -94,7 +94,7 @@ def main(**custom_params):
 
     # +1 b/c of Python's zero-based index
     years = np.arange(parameters['year_min'] + 1, parameters['year_max'] + 1)
-    weeks = np.arange(3, 53)
+    weeks = np.arange(1, 53)
     for year in years:
         for week in weeks:
             if week < 10:
