@@ -1,142 +1,100 @@
+import json
 import math
 import numpy as np
-import pandas as pd
 from scipy.optimize import fsolve
-
-import constants as c
 
 
 class Conversion:
-    """Provides a framework for converting coordinates between
-    ISN93 and WGS84, the former being the standard georeference
+    """Converts between WGS84 and ISN93.
+    
+    Provides a framework for converting coordinates between
+    WGS84 and ISN93, the latter being the standard georeference
     system for industry in Iceland.
-
-    Params:
-        new_ref_system (str): The destination coordinate system,
-                              either 'isn' or 'wgs'
-        folder (str): File folder absolute path
-        file (str): The file name, including file ending
-
-    Usage:
-        conversion = Conversion('isn',
-                                'C:/Users/',
-                                'Earthquakes.csv')
-        conversion.read_file()
-        conversion.converter()
-        conversion.write_csv()
-
-    Note:
-        Equations adapted from Kristjan Mikaelsson's JS-code:
-        https://bit.ly/32rqbFE
+    Equations adapted from Kristjan Mikaelsson's JS-code:
+    https://bit.ly/32rqbFE
+    
+    Example:
+        conversion_ = Conversion()
+        lon, lat = -22.69113, 63.82388
+        x, y = conversion_.wgs_to_isn(lon, lat)
     """
 
-    def __init__(self, new_ref_system, folder, file):
-        self.new_ref_system = new_ref_system.lower()
-        self.folder = folder
-        self.file = file
+    def __init__(self):
+        with open("config.json") as f:
+            settings = json.load(f)
 
-        self.c = c
-        # Empirical coefficients
-        self.A = c.A
-        self.B = c.B
-        self.C = c.C
-        self.E = c.E
-        self.F = c.F
-        self.G = c.G
-        self.H = c.H
-        self.J = c.J
-        self.K = c.K
+        constants = settings["wgs_isn_conversion_constants"]
+        self.A = constants["A"]
+        self.B = constants["B"]
+        self.C = constants["C"]
+        self.E = constants["E"]
+        self.F = constants["F"]
+        self.G = constants["G"]
+        self.H = constants["H"]
+        self.J = constants["J"]
+        self.K = constants["K"]
 
-    def read_file(self):
-        # NOTE This method needs to be adapted for different
-        # column structures. No use in making it too general.
-        # just make sure the i and j values are converted to numpy
-        self.df = pd.read_csv(f'{self.folder}/{self.file}')
-
-    def wgs_to_isn(self):
+    def wgs_to_isn(self, lon: float, lat: float):
         """Converts WGS84 value pairs (the familiar lon and lat) to ISN93.
-
-        Note:
-            No use in trying to prettify the equation
-            in the code, it is truly an eyesore. See it here
-            in a nicer format: https://i.imgur.com/UH42pDb.png
+        No use in trying to prettify the equation
+        it is truly an eyesore. See it here in a cleaner format:
+        https://i.imgur.com/UH42pDb.png
+        Args:
+            lon: longitude
+            lat: latitude
+        
+        Returns:
+            x (float): horizontal ISN93 coordinate
+            y (float): vertical ISN93 coordinate
         """
 
-        lon = self.df.lon.to_numpy()
-        lat = self.df.lat.to_numpy()
+        k = lat * self.A
+        p = self.F * np.sin(k)
+        o = self.B * math.pow(
+            math.tan(self.C - (k / 2)) / math.pow(
+                (1 - p) / (1 + p), self.E), self.G)
+        q = (lon + 19) * self.H
+        x = self.K + o * np.sin(q)
+        y = self.J - o * np.cos(q)
 
-        x = []
-        y = []
-        for i, val in enumerate(lon):
-            k = lat[i]*self.A
-            p = self.F*np.sin(k)
-            o = self.B*math.pow(math.tan(self.C-(k/2)) /
-                                math.pow((1-p)/(1+p), self.E), self.G)
-            q = (val+19)*self.H
-            x.append(round((self.K+o*np.sin(q))*1000)/1000)
-            y.append(round((self.J-o*np.cos(q))*1000)/1000)
+        return round(x, 1), round(y, 1)
 
-        self.df.lon = x
-        self.df.lat = y
-        self.df.rename(columns={'lon': 'x',
-                                'lat': 'y'},
-                       inplace=True)
-        print(self.df.head())
+    def isn_to_wgs(self, x: float, y: float, DECIMALS: int = 5):
+        """Converts ISN93 value pairs to WGS84 (the familiar lat & lon).
+        
+        No use in trying to prettify the equation
+        it is truly an eyesore. See it here in a cleaner format:
+        https://i.imgur.com/UH42pDb.png
+        Args:
+            x: horizontal ISN93 coordinate
+            y: vertical ISN93 coordinate
+            DECIMALS: The number of decimals for the coordinate pair returned
+        
+        Returns:
+            lon (float): WGS84 longitude
+            lat (float): WGS84 latitude
+        """
 
-    def isn_to_wgs(self):
-        """Converts ISN93 value pairs to WGS84 (the familiar lat & lon)."""
+        def _f(k):
+            """The empirical equation for latitude.
+            Is solved numerically.
+            Note that it's written here as f(k)=0
+            Args:
+                k ([type]): The variable to optimize
+            Returns:
+                [type]: [description]
+            """
+            return ((1.0 + self.F * np.sin(k)) *
+                    (np.tan(self.C - 0.5 * k))**(1.0 / self.E) /
+                    ((1.0 - self.F * np.sin(k)) *
+                     (p / self.B)**(1.0 / (self.E * self.G))) - 1)
 
-        x = self.df.x.to_numpy()
-        y = self.df.y.to_numpy()
-        # The empirical equation for latitude.
-        # Note that it's written here as f(k)=0
+        q = np.arctan((x - 5 * 10**5) / (self.J - y))
+        p = (x - 5 * 10**5) / (np.sin(q))
 
-        def f(k):
-            return (1.0 + self.F*np.sin(k)) \
-                * (np.tan(self.C - 0.5*k))**(1.0/self.E) \
-                / ((1.0 - self.F*np.sin(k))
-                    * (p/self.B)**(1.0/(self.E*self.G))) - 1
+        r = float(fsolve(_f, 1.0))
 
-        lon = []
-        lat = []
-        for i, val in enumerate(x):
-            q = np.arctan((val-5*10**5)/(self.J-y[i]))
-            p = (val-5*10**5)/(np.sin(q))
+        lon = q / self.H - 19
+        lat = r / self.A
 
-            # We solve the equation numerically with an initial guess of
-            # f=1.0 [is safe for the range of values encountered here]
-            r = float(fsolve(f, 1.0))
-
-            lon.append(round(q/self.H-19, 5))
-            lat.append(round(r/self.A, 5))
-
-        self.df.x = lon
-        self.df.y = lat
-        self.df.rename(columns={'x': 'lon',
-                                'y': 'lat'},
-                       inplace=True)
-
-    def converter(self):
-        """Performs the actual conversion."""
-
-        if self.new_ref_system == 'isn':
-            self.wgs_to_isn()
-        elif self.new_ref_system == 'wgs':
-            self.isn_to_wgs()
-
-    def write_csv(self):
-        """"Writes dataframe to csv."""
-
-        file = self.file.split('.')[0]
-        self.df.to_csv(f'{self.folder}{file}_converted.csv')
-
-    def write_xlsx(self, x, y):
-        pass
-
-if __name__ == '__main__':
-    conversion = Conversion('wgs',
-                            'C:/Users/',
-                            'Earthquakes.csv')
-    conversion.read_file()
-    conversion.converter()
-    # conversion.write_csv()
+        return round(lon, DECIMALS), round(lat, DECIMALS)
