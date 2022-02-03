@@ -108,12 +108,8 @@ def main(**custom_params):
                                    y_max=parameters['y_max'])
             data_filtered_and_parsed = parse_datetime(data_filtered)
             logging.info(f'{year}-{week} scraped, filtered, and parsed')
-            # plot.plot(data_filtered_and_parsed)
-            # print(data_filtered_and_parsed)
             database.to_sql(df=data_filtered_and_parsed,
                             table_name='seismicity')
-            break
-        break
 
 
 if __name__ == '__main__':
