@@ -100,6 +100,14 @@ def parse_datetime(df: pd.DataFrame):
 
 
 def main(**custom_params):
+    """Collects seismic data from Icelandic MET by year and week.
+
+    Usage:
+        See google-fire docs.
+    
+    Example:
+        $ python3 collect.py --year_min=2000 --year_max=2003
+    """    
     for parameter, value in custom_params.items():
         parameters[parameter] = value
 

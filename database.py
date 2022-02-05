@@ -1,9 +1,8 @@
 import json
 import logging
 import pandas as pd
-import pymysql
 from sqlalchemy import create_engine
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 
 logging.basicConfig(filename=f'logs.log',
                     level=logging.INFO,
@@ -36,3 +35,7 @@ def to_sql(df: pd.DataFrame, table_name: str):
     except IntegrityError:
         logging.warning(
             'SQL insertion error, possibly due to duplicate values')
+    except OperationalError:
+        print(df)
+        logging.warning('SQL insertion error, possibly due to \
+            incorrectly formatted datetime value')
