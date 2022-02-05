@@ -55,10 +55,16 @@ def scrape(url: str):
     Note:
         skipinitialspace=True is to circumvent the heterogenous spacing
             in the original document
+        dtype=str is to handle edge case where leading time digits are 0.
+           Otherwise it omits these zero(s)
     """
 
     try:
-        return pd.read_csv(url, sep=' ', skipinitialspace=True, index_col=0, dtype=str)
+        return pd.read_csv(url,
+                           sep=' ',
+                           skipinitialspace=True,
+                           index_col=0,
+                           dtype=str)
     except HTTPError:
         logging.warning('Scraping failed, ensure year/week combination exists')
 
@@ -83,7 +89,12 @@ def filter(df: pd.DataFrame, x_min: float, x_max: float, y_min: float,
 
 def parse_datetime(df: pd.DataFrame):
     df['Datetime'] = df['Dags.'].astype(str) + df['Timi'].astype(str)
-    df['Datetime'] = pd.to_datetime(df['Datetime'], format=f'%Y%m%d%H%M%S.%f')
+    try:
+        df['Datetime'] = pd.to_datetime(df['Datetime'],
+                                        format=f'%Y%m%d%H%M%S.%f')
+    except ValueError:
+        logging.warning(
+            'Parsing failed, probably due to time data not matching strformat')
     df.drop(['Dags.', 'Timi'], axis=1, inplace=True)
     return df
 
@@ -93,8 +104,8 @@ def main(**custom_params):
         parameters[parameter] = value
 
     # +1 b/c of Python's zero-based index
-    years = np.arange(parameters['year_min'] + 1, parameters['year_max'] + 1)
-    weeks = np.arange(1, 53)
+    years = np.arange(parameters['year_min'], parameters['year_max'] + 1)
+    weeks = np.arange(parameters['week_min'], parameters['week_max'] + 1)
     for year in years:
         for week in weeks:
             if week < 10:
