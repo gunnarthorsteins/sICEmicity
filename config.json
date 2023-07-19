@@ -20,5 +20,6 @@
         "x_max": -20.5,
         "y_min": 63.4,
         "y_max": 64.4
-    }
+    },
+    "database": "seismicity.sqlite3"
 }

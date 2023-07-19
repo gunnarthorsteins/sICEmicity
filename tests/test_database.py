@@ -8,7 +8,7 @@ import sqlalchemy
 pwd = os.getcwd()
 sys.path.insert(0, pwd)
 
-import database
+import sicemicity.database as database
 
 class DataBaseTest(unittest.TestCase):
     def test_connection(self):
@@ -17,7 +17,7 @@ class DataBaseTest(unittest.TestCase):
         
 
     def test_integrity(self):
-        self.assertRaises(sqlalchemy.exc.IntegrityError, database.to_sql,)
+        self.assertRaises(sqlalchemy.exc.IntegrityError, database.write,)
 
     def test_incorrectly_formatted_datetime(self):
 

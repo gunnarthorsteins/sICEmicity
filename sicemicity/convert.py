@@ -59,16 +59,17 @@ class Conversion:
 
         return round(x, 1), round(y, 1)
 
-    def isn_to_wgs(self, x: float, y: float, DECIMALS: int = 5):
+    def isn_to_wgs(self, x: float, y: float, decimals: int = 5) -> tuple[float, float]:
         """Converts ISN93 value pairs to WGS84 (the familiar lat & lon).
         
         No use in trying to prettify the equation
         it is truly an eyesore. See it here in a cleaner format:
         https://i.imgur.com/UH42pDb.png
+
         Args:
             x: horizontal ISN93 coordinate
             y: vertical ISN93 coordinate
-            DECIMALS: The number of decimals for the coordinate pair returned
+            decimals: The number of decimals for the coordinate pair returned
         
         Returns:
             lon (float): WGS84 longitude
@@ -97,4 +98,4 @@ class Conversion:
         lon = q / self.H - 19
         lat = r / self.A
 
-        return round(lon, DECIMALS), round(lat, DECIMALS)
+        return round(lon, decimals), round(lat, decimals)

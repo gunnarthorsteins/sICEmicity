@@ -6,7 +6,7 @@ import unittest
 pwd = os.getcwd()
 sys.path.insert(0, pwd)
 
-from convert import Conversion
+from sicemicity.convert import Conversion
 
 # Hnit til prófunar í báðum hnitakerfum úr borholugrunni OS
 # Þessi tilteknu eru holutoppshnit RN-27:
